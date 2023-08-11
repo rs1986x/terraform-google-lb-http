@@ -124,38 +124,37 @@ Current version is 9.0. Upgrade guides:
 - [7.X -> 8.0](/docs/upgrading_to_v8.0.md)
 - [8.X -> 9.0](/docs/upgrading_to_v9.0.md)
 
-
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 
 ## Inputs
 
-| Name                    | Description                                                                                                                                |     Type     |  Default  | Required |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | :----------: | :-------: | :------: |
-| address                 | IPv4 address (actual IP address value)                                                                                                     |    string    | `"null"`  |    no    |
-| ipv6_address            | IPv6 address (actual IP address value)                                                                                                     |    string    | `"null"`  |    no    |
-| backends                | Map backend indices to list of backend maps.                                                                                               |    object    |    n/a    |   yes    |
-| cdn                     | Set to `true` to enable cdn on backend.                                                                                                    |     bool     | `"false"` |    no    |
-| certificate             | Content of the SSL certificate. Required if `ssl` is `true` and `ssl_certificates` is empty.                                               |    string    | `"null"`  |    no    |
-| certificate\_map        | Certificate Map ID in format projects/{project}/locations/global/certificateMaps/{{name}}. Identifies a certificate map associated with the given target proxy | `string` | `null` | no |
-| create_address          | Create a new global IPv4 address                                                                                                           |     bool     | `"true"`  |    no    |
-| create_ipv6_address     | Create a new global IPv6 address                                                                                                           |     bool     | `"true"`  |    no    |
-| create_url_map          | Set to `false` if url_map variable is provided.                                                                                            |     bool     | `"true"`  |    no    |
-| firewall_networks       | Names of the networks to create firewall rules in                                                                                          | list(string) | `<list>`  |    no    |
-| firewall_projects       | Names of the projects to create firewall rules in                                                                                          | list(string) | `<list>`  |    no    |
-| http_forward            | Set to `false` to disable HTTP port 80 forward                                                                                             |     bool     | `"true"`  |    no    |
-| https_redirect          | Set to `true` to enable https redirect on the lb.                                                                                          |     bool     | `"false"` |    no    |
-| name                    | Name for the forwarding rule and prefix for supporting resources                                                                           |    string    |    n/a    |   yes    |
-| private_key             | Content of the private SSL key. Required if `ssl` is `true` and `ssl_certificates` is empty.                                               |    string    | `"null"`  |    no    |
-| project                 | The project to deploy to, if not set the default provider project is used.                                                                 |    string    |    n/a    |   yes    |
-| quic                    | Set to `true` to enable QUIC support                                                                                                       |     bool     | `"false"` |    no    |
-| security_policy         | The resource URL for the security policy to associate with the backend service                                                             |    string    | `"null"`  |    no    |
-| ssl                     | Set to `true` to enable SSL support, requires variable `ssl_certificates` - a list of self_link certs                                      |     bool     | `"false"` |    no    |
-| ssl_certificates        | SSL cert self_link list. Required if `ssl` is `true` and no `private_key` and `certificate` is provided.                                   | list(string) | `<list>`  |    no    |
-| ssl_policy              | Selfink to SSL Policy                                                                                                                      |    string    | `"null"`  |    no    |
-| target_service_accounts | List of target service accounts for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified. | list(string) | `<list>`  |    no    |
-| target_tags             | List of target tags for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified.             | list(string) | `<list>`  |    no    |
-| url_map                 | The url_map resource to use. Default is to send all traffic to first backend.                                                              |    string    | `"null"`  |    no    |
-| use_ssl_certificates    | If true, use the certificates provided by `ssl_certificates`, otherwise, create cert from `private_key` and `certificate`                  |     bool     | `"false"` |    no    |
+| Name                    | Description                                                                                                                                                    |     Type     |  Default  | Required |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------: | :-------: | :------: |
+| address                 | IPv4 address (actual IP address value)                                                                                                                         |    string    | `"null"`  |    no    |
+| ipv6_address            | IPv6 address (actual IP address value)                                                                                                                         |    string    | `"null"`  |    no    |
+| backends                | Map backend indices to list of backend maps.                                                                                                                   |    object    |    n/a    |   yes    |
+| cdn                     | Set to `true` to enable cdn on backend.                                                                                                                        |     bool     | `"false"` |    no    |
+| certificate             | Content of the SSL certificate. Required if `ssl` is `true` and `ssl_certificates` is empty.                                                                   |    string    | `"null"`  |    no    |
+| certificate_map         | Certificate Map ID in format projects/{project}/locations/global/certificateMaps/{{name}}. Identifies a certificate map associated with the given target proxy |   `string`   |  `null`   |    no    |
+| create_address          | Create a new global IPv4 address                                                                                                                               |     bool     | `"true"`  |    no    |
+| create_ipv6_address     | Create a new global IPv6 address                                                                                                                               |     bool     | `"true"`  |    no    |
+| create_url_map          | Set to `false` if url_map variable is provided.                                                                                                                |     bool     | `"true"`  |    no    |
+| firewall_networks       | Names of the networks to create firewall rules in                                                                                                              | list(string) | `<list>`  |    no    |
+| firewall_projects       | Names of the projects to create firewall rules in                                                                                                              | list(string) | `<list>`  |    no    |
+| http_forward            | Set to `false` to disable HTTP port 80 forward                                                                                                                 |     bool     | `"true"`  |    no    |
+| https_redirect          | Set to `true` to enable https redirect on the lb.                                                                                                              |     bool     | `"false"` |    no    |
+| name                    | Name for the forwarding rule and prefix for supporting resources                                                                                               |    string    |    n/a    |   yes    |
+| private_key             | Content of the private SSL key. Required if `ssl` is `true` and `ssl_certificates` is empty.                                                                   |    string    | `"null"`  |    no    |
+| project                 | The project to deploy to, if not set the default provider project is used.                                                                                     |    string    |    n/a    |   yes    |
+| quic                    | Set to `true` to enable QUIC support                                                                                                                           |     bool     | `"false"` |    no    |
+| security_policy         | The resource URL for the security policy to associate with the backend service                                                                                 |    string    | `"null"`  |    no    |
+| ssl                     | Set to `true` to enable SSL support, requires variable `ssl_certificates` - a list of self_link certs                                                          |     bool     | `"false"` |    no    |
+| ssl_certificates        | SSL cert self_link list. Required if `ssl` is `true` and no `private_key` and `certificate` is provided.                                                       | list(string) | `<list>`  |    no    |
+| ssl_policy              | Selfink to SSL Policy                                                                                                                                          |    string    | `"null"`  |    no    |
+| target_service_accounts | List of target service accounts for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified.                     | list(string) | `<list>`  |    no    |
+| target_tags             | List of target tags for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified.                                 | list(string) | `<list>`  |    no    |
+| url_map                 | The url_map resource to use. Default is to send all traffic to first backend.                                                                                  |    string    | `"null"`  |    no    |
+| use_ssl_certificates    | If true, use the certificates provided by `ssl_certificates`, otherwise, create cert from `private_key` and `certificate`                                      |     bool     | `"false"` |    no    |
 
 ## Outputs
 

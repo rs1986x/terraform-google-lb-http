@@ -19,7 +19,8 @@ locals {
   address      = var.create_address ? join("", google_compute_global_address.default.*.address) : var.address
   ipv6_address = var.create_ipv6_address ? join("", google_compute_global_address.default_ipv6.*.address) : var.ipv6_address
 
-  url_map             = var.create_url_map ? join("", google_compute_url_map.default.*.self_link) : var.url_map
+  url_map = var.create_url_map ? join("", google_compute_url_map.default.*.self_link) : var.url_map
+
   create_http_forward = var.http_forward || var.https_redirect
 
   health_checked_backends = { for backend_index, backend_value in var.backends : backend_index => backend_value if backend_value["health_check"] != null }
@@ -43,9 +44,9 @@ resource "google_compute_global_forwarding_rule" "http" {
 }
 
 resource "google_compute_global_forwarding_rule" "https" {
+  count                 = var.ssl || var.certificate_map != null ? 1 : 0
   provider              = google-beta
   project               = var.project
-  count                 = var.ssl || var.certificate_map != null ? 1 : 0
   name                  = "${var.name}-https"
   target                = google_compute_target_https_proxy.default[0].self_link
   ip_address            = local.address
@@ -56,13 +57,14 @@ resource "google_compute_global_forwarding_rule" "https" {
 }
 
 resource "google_compute_global_address" "default" {
-  provider   = google-beta
   count      = local.is_internal ? 0 : var.create_address ? 1 : 0
+  provider   = google-beta
   project    = var.project
   name       = "${var.name}-address"
   ip_version = "IPV4"
   labels     = var.labels
 }
+
 ### IPv4 block ###
 
 ### IPv6 block ###
@@ -79,10 +81,12 @@ resource "google_compute_global_forwarding_rule" "http_ipv6" {
   network               = local.internal_network
 }
 
+
 resource "google_compute_global_forwarding_rule" "https_ipv6" {
+  count = var.enable_ipv6 && (var.ssl || var.certificate_map != null) ? 1 : 0
+
   provider              = google-beta
   project               = var.project
-  count                 = var.enable_ipv6 && (var.ssl || var.certificate_map != null) ? 1 : 0
   name                  = "${var.name}-ipv6-https"
   target                = google_compute_target_https_proxy.default[0].self_link
   ip_address            = local.ipv6_address
@@ -93,34 +97,35 @@ resource "google_compute_global_forwarding_rule" "https_ipv6" {
 }
 
 resource "google_compute_global_address" "default_ipv6" {
-  provider   = google-beta
   count      = local.is_internal ? 0 : (var.enable_ipv6 && var.create_ipv6_address) ? 1 : 0
+  provider   = google-beta
   project    = var.project
   name       = "${var.name}-ipv6-address"
   ip_version = "IPV6"
   labels     = var.labels
 }
+
 ### IPv6 block ###
 
 # HTTP proxy when http forwarding is true
 resource "google_compute_target_http_proxy" "default" {
+  url_map = var.https_redirect == false ? local.url_map : join("", google_compute_url_map.https_redirect.*.self_link)
   project = var.project
   count   = local.create_http_forward ? 1 : 0
   name    = "${var.name}-http-proxy"
-  url_map = var.https_redirect == false ? local.url_map : join("", google_compute_url_map.https_redirect.*.self_link)
 }
 
 # HTTPS proxy when ssl is true
 resource "google_compute_target_https_proxy" "default" {
-  project = var.project
-  count   = var.ssl || var.certificate_map != null ? 1 : 0
-  name    = "${var.name}-https-proxy"
-  url_map = local.url_map
+  count           = var.ssl || var.certificate_map != null ? 1 : 0
+  certificate_map = var.certificate_map != null ? "//certificatemanager.googleapis.com/${var.certificate_map}" : null
+  quic_override   = var.quic == null ? "NONE" : var.quic ? "ENABLE" : "DISABLE"
+  project         = var.project
+  name            = "${var.name}-https-proxy"
+  url_map         = local.url_map
 
   ssl_certificates = compact(concat(var.ssl_certificates, google_compute_ssl_certificate.default.*.self_link, google_compute_managed_ssl_certificate.default.*.self_link, ), )
-  certificate_map  = var.certificate_map != null ? "//certificatemanager.googleapis.com/${var.certificate_map}" : null
   ssl_policy       = var.ssl_policy
-  quic_override    = var.quic == null ? "NONE" : var.quic ? "ENABLE" : "DISABLE"
 }
 
 resource "google_compute_ssl_certificate" "default" {
@@ -159,7 +164,6 @@ resource "google_compute_managed_ssl_certificate" "default" {
     domains = var.managed_ssl_certificate_domains
   }
 }
-
 resource "google_compute_url_map" "default" {
   project         = var.project
   count           = var.create_url_map ? 1 : 0
@@ -269,8 +273,8 @@ resource "google_compute_backend_service" "default" {
           include_query_string   = each.value.cdn_policy.cache_key_policy.include_query_string
           query_string_blacklist = each.value.cdn_policy.cache_key_policy.query_string_blacklist
           query_string_whitelist = each.value.cdn_policy.cache_key_policy.query_string_whitelist
-          include_http_headers   = each.value.cdn_policy.cache_key_policy.include_http_headers
           include_named_cookies  = each.value.cdn_policy.cache_key_policy.include_named_cookies
+          include_http_headers   = each.value.cdn_policy.cache_key_policy.include_http_headers
         }
       }
     }

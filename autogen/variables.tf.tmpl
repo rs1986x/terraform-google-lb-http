@@ -24,6 +24,19 @@ variable "name" {
   type        = string
 }
 
+{% if internal %}
+variable "region" {
+  description = "Names of the region for the internal http LB"
+  type        = string
+  default     = "europe-west1"
+}
+
+variable "subnetwork" {
+  description = "ID of the subnet to create the internal http LB in"
+  type        = string
+}
+{% endif %}
+
 variable "create_address" {
   type        = bool
   description = "Create a new global IPv4 address"
@@ -150,8 +163,10 @@ variable "backends" {
         include_query_string   = optional(bool)
         query_string_blacklist = optional(list(string))
         query_string_whitelist = optional(list(string))
-        include_http_headers   = optional(list(string))
         include_named_cookies  = optional(list(string))
+        {% if not internal %}
+        include_http_headers   = optional(list(string))
+        {% endif %}
       }))
     }))
   }))
@@ -187,11 +202,13 @@ variable "ssl_policy" {
   default     = null
 }
 
+{% if not internal %}
 variable "quic" {
   type        = bool
   description = "Specifies the QUIC override policy for this resource. Set true to enable HTTP/3 and Google QUIC support, false to disable both. Defaults to null which enables support for HTTP/3 only."
   default     = null
 }
+{% endif %}
 
 variable "private_key" {
   description = "Content of the private SSL key. Required if `ssl` is `true` and `ssl_certificates` is empty."
@@ -259,11 +276,13 @@ variable "load_balancing_scheme" {
   default     = "EXTERNAL"
 }
 
+{% if not internal %}
 variable "certificate_map" {
   description = "Certificate Map ID in format projects/{project}/locations/global/certificateMaps/{name}. Identifies a certificate map associated with the given target proxy"
   type        = string
   default     = null
 }
+{% endif %}
 
 variable "network" {
   description = "Network for INTERNAL_SELF_MANAGED load balancing scheme"

@@ -24,6 +24,17 @@ variable "name" {
   type        = string
 }
 
+variable "region" {
+  description = "Names of the region for the internal http LB"
+  type        = string
+  default     = "europe-west1"
+}
+
+variable "subnetwork" {
+  description = "ID of the subnet to create the internal http LB in"
+  type        = string
+}
+
 variable "create_address" {
   type        = bool
   description = "Create a new global IPv4 address"
@@ -54,36 +65,85 @@ variable "ipv6_address" {
   default     = null
 }
 
+variable "firewall_networks" {
+  description = "Names of the networks to create firewall rules in"
+  type        = list(string)
+  default     = []
+}
+
+variable "firewall_projects" {
+  description = "Names of the projects to create firewall rules in"
+  type        = list(string)
+  default     = ["default"]
+}
+
+variable "target_tags" {
+  description = "List of target tags for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified."
+  type        = list(string)
+  default     = []
+}
+
+variable "target_service_accounts" {
+  description = "List of target service accounts for health check firewall rule. Exactly one of target_tags or target_service_accounts should be specified."
+  type        = list(string)
+  default     = []
+}
 
 variable "backends" {
   description = "Map backend indices to list of backend maps."
   type = map(object({
-    protocol                = string
-    port_name               = string
-    description             = string
-    enable_cdn              = bool
-    compression_mode        = string
-    security_policy         = string
-    edge_security_policy    = string
-    custom_request_headers  = list(string)
-    custom_response_headers = list(string)
+    port                    = optional(number, null)
+    protocol                = optional(string, null)
+    port_name               = optional(string, null)
+    description             = optional(string, null)
+    enable_cdn              = optional(bool, null)
+    compression_mode        = optional(string, null)
+    security_policy         = optional(string, null)
+    edge_security_policy    = optional(string, null)
+    custom_request_headers  = optional(list(string), null)
+    custom_response_headers = optional(list(string), null)
 
+    timeout_sec                     = optional(number, null)
+    connection_draining_timeout_sec = optional(number, null)
+    session_affinity                = optional(string, null)
+    affinity_cookie_ttl_sec         = optional(number, null)
 
+    health_check = optional(object({
+      check_interval_sec  = optional(number, null)
+      timeout_sec         = optional(number, null)
+      healthy_threshold   = optional(number, null)
+      unhealthy_threshold = optional(number, null)
+      request_path        = optional(string, null)
+      port_specification  = optional(string, null)
+      port                = optional(number, null)
+      host                = optional(string, null)
+      logging             = optional(bool, null)
+    }), null)
 
-    log_config = object({
-      enable      = bool
-      sample_rate = number
-    })
+    log_config = optional(object({
+      enable      = optional(bool, null)
+      sample_rate = optional(number, null)
+    }), null)
 
     groups = list(object({
       group = string
 
+      balancing_mode               = optional(string, null)
+      capacity_scaler              = optional(number, null)
+      description                  = optional(string, null)
+      max_connections              = optional(number, null)
+      max_connections_per_instance = optional(number, null)
+      max_connections_per_endpoint = optional(number, null)
+      max_rate                     = optional(number, null)
+      max_rate_per_instance        = optional(number, null)
+      max_rate_per_endpoint        = optional(number, null)
+      max_utilization              = optional(number, null)
     }))
-    iap_config = object({
+    iap_config = optional(object({
       enable               = bool
       oauth2_client_id     = string
       oauth2_client_secret = string
-    })
+    }), null)
     cdn_policy = optional(object({
       cache_mode                   = optional(string)
       signed_url_cache_max_age_sec = optional(string)
@@ -91,10 +151,9 @@ variable "backends" {
       max_ttl                      = optional(number)
       client_ttl                   = optional(number)
       negative_caching             = optional(bool)
-      negative_caching_policy = optional(object({
-        code = optional(number)
-        ttl  = optional(number)
-      }))
+      negative_caching_policy = optional(map(object({
+        ttl = optional(number)
+      })), null)
       serve_while_stale = optional(number)
       cache_key_policy = optional(object({
         include_host           = optional(bool)
@@ -102,7 +161,6 @@ variable "backends" {
         include_query_string   = optional(bool)
         query_string_blacklist = optional(list(string))
         query_string_whitelist = optional(list(string))
-        include_http_headers   = optional(list(string))
         include_named_cookies  = optional(list(string))
       }))
     }))
@@ -139,11 +197,6 @@ variable "ssl_policy" {
   default     = null
 }
 
-variable "quic" {
-  type        = bool
-  description = "Specifies the QUIC override policy for this resource. Set true to enable HTTP/3 and Google QUIC support, false to disable both. Defaults to null which enables support for HTTP/3 only."
-  default     = null
-}
 
 variable "private_key" {
   description = "Content of the private SSL key. Required if `ssl` is `true` and `ssl_certificates` is empty."
@@ -211,11 +264,6 @@ variable "load_balancing_scheme" {
   default     = "EXTERNAL"
 }
 
-variable "certificate_map" {
-  description = "Certificate Map ID in format projects/{project}/locations/global/certificateMaps/{name}. Identifies a certificate map associated with the given target proxy"
-  type        = string
-  default     = null
-}
 
 variable "network" {
   description = "Network for INTERNAL_SELF_MANAGED load balancing scheme"

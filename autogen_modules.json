@@ -9,6 +9,14 @@
     },
     {
         "template_folder": "./autogen",
+        "path": "./modules/internal",
+        "options": {
+            "module_path": "//modules/internal",
+            "internal": true
+        }
+    },
+    {
+        "template_folder": "./autogen",
         "path": "./",
         "options": {
             "module_path": "",

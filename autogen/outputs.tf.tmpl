@@ -16,10 +16,20 @@
 
 output "backend_services" {
   description = "The backend service resources."
+  {% if internal %}
+  value       = google_compute_region_backend_service.default
+  {% else %}
   value       = google_compute_backend_service.default
+  {% endif %}
   sensitive   = true // can contain sensitive iap_config
 }
 
+{% if internal %}
+output "internal_ip" {
+  description = "The internal IPv4 assigned to the global fowarding rule."
+  value       = local.address
+}
+{% else %}
 output "external_ip" {
   description = "The external IPv4 assigned to the global fowarding rule."
   value       = local.address
@@ -34,18 +44,31 @@ output "ipv6_enabled" {
   description = "Whether IPv6 configuration is enabled on this load-balancer"
   value       = var.enable_ipv6
 }
+{% endif %}
 
 output "http_proxy" {
   description = "The HTTP proxy used by this module."
+  {% if internal %}
+  value       = google_compute_region_target_http_proxy.default[*].self_link
+  {% else %}
   value       = google_compute_target_http_proxy.default[*].self_link
+  {% endif %}
 }
 
 output "https_proxy" {
   description = "The HTTPS proxy used by this module."
+  {% if internal %}
+  value       = google_compute_region_target_https_proxy.default[*].self_link
+  {% else %}
   value       = google_compute_target_https_proxy.default[*].self_link
+  {% endif %}
 }
 
 output "url_map" {
   description = "The default URL map used by this module."
+  {% if internal %}
+  value       = google_compute_region_url_map.default[*].self_link
+  {% else %}
   value       = google_compute_url_map.default[*].self_link
+  {% endif %}
 }

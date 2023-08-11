@@ -24,6 +24,7 @@ variable "name" {
   type        = string
 }
 
+
 variable "create_address" {
   type        = bool
   description = "Create a new global IPv4 address"
@@ -150,8 +151,8 @@ variable "backends" {
         include_query_string   = optional(bool)
         query_string_blacklist = optional(list(string))
         query_string_whitelist = optional(list(string))
-        include_http_headers   = optional(list(string))
         include_named_cookies  = optional(list(string))
+        include_http_headers   = optional(list(string))
       }))
     }))
   }))

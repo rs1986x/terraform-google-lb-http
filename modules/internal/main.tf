@@ -16,26 +16,28 @@
 
 
 locals {
-  address      = var.create_address ? join("", google_compute_global_address.default.*.address) : var.address
-  ipv6_address = var.create_ipv6_address ? join("", google_compute_global_address.default_ipv6.*.address) : var.ipv6_address
+  address      = var.create_address ? join("", google_compute_address.default.*.address) : var.address
+  ipv6_address = var.ipv6_address
 
-  url_map = var.create_url_map ? join("", google_compute_url_map.default.*.self_link) : var.url_map
+  url_map = var.create_url_map ? join("", google_compute_region_url_map.default.*.self_link) : var.url_map
 
   create_http_forward = var.http_forward || var.https_redirect
 
   health_checked_backends = { for backend_index, backend_value in var.backends : backend_index => backend_value if backend_value["health_check"] != null }
 
-  is_internal      = var.load_balancing_scheme == "INTERNAL_SELF_MANAGED"
-  internal_network = local.is_internal ? var.network : null
+  is_internal      = var.load_balancing_scheme == "INTERNAL_MANAGED"
+  internal_network = var.network
 }
 
 ### IPv4 block ###
-resource "google_compute_global_forwarding_rule" "http" {
+resource "google_compute_forwarding_rule" "http" {
+  region                = var.region
+  subnetwork            = var.subnetwork
   provider              = google-beta
   project               = var.project
   count                 = local.create_http_forward ? 1 : 0
   name                  = var.name
-  target                = google_compute_target_http_proxy.default[0].self_link
+  target                = google_compute_region_target_http_proxy.default[0].self_link
   ip_address            = local.address
   port_range            = "80"
   labels                = var.labels
@@ -43,12 +45,14 @@ resource "google_compute_global_forwarding_rule" "http" {
   network               = local.internal_network
 }
 
-resource "google_compute_global_forwarding_rule" "https" {
-  count                 = var.ssl || var.certificate_map != null ? 1 : 0
+resource "google_compute_forwarding_rule" "https" {
+  region                = var.region
+  subnetwork            = var.subnetwork
+  count                 = var.ssl != false ? 1 : 0
   provider              = google-beta
   project               = var.project
   name                  = "${var.name}-https"
-  target                = google_compute_target_https_proxy.default[0].self_link
+  target                = google_compute_region_target_https_proxy.default[0].self_link
   ip_address            = local.address
   port_range            = "443"
   labels                = var.labels
@@ -56,39 +60,32 @@ resource "google_compute_global_forwarding_rule" "https" {
   network               = local.internal_network
 }
 
-resource "google_compute_global_address" "default" {
-  count      = local.is_internal ? 0 : var.create_address ? 1 : 0
-  provider   = google-beta
-  project    = var.project
-  name       = "${var.name}-address"
-  ip_version = "IPV4"
-  labels     = var.labels
+resource "google_compute_address" "default" {
+  count        = 1
+  purpose      = "SHARED_LOADBALANCER_VIP"
+  subnetwork   = var.subnetwork
+  address_type = "INTERNAL"
+  provider     = google-beta
+  project      = var.project
+  name         = "${var.name}-address"
+  ip_version   = "IPV4"
+  labels       = var.labels
 }
 
 ### IPv4 block ###
 
 ### IPv6 block ###
-resource "google_compute_global_forwarding_rule" "http_ipv6" {
-  provider              = google-beta
-  project               = var.project
-  count                 = (var.enable_ipv6 && local.create_http_forward) ? 1 : 0
-  name                  = "${var.name}-ipv6-http"
-  target                = google_compute_target_http_proxy.default[0].self_link
-  ip_address            = local.ipv6_address
-  port_range            = "80"
-  labels                = var.labels
-  load_balancing_scheme = var.load_balancing_scheme
-  network               = local.internal_network
-}
 
 
-resource "google_compute_global_forwarding_rule" "https_ipv6" {
-  count = var.enable_ipv6 && (var.ssl || var.certificate_map != null) ? 1 : 0
+resource "google_compute_forwarding_rule" "https_ipv6" {
+  count      = var.enable_ipv6 && (var.ssl != false) ? 1 : 0
+  region     = var.region
+  subnetwork = var.subnetwork
 
   provider              = google-beta
   project               = var.project
   name                  = "${var.name}-ipv6-https"
-  target                = google_compute_target_https_proxy.default[0].self_link
+  target                = google_compute_region_target_https_proxy.default[0].self_link
   ip_address            = local.ipv6_address
   port_range            = "443"
   labels                = var.labels
@@ -96,33 +93,26 @@ resource "google_compute_global_forwarding_rule" "https_ipv6" {
   network               = local.internal_network
 }
 
-resource "google_compute_global_address" "default_ipv6" {
-  count      = local.is_internal ? 0 : (var.enable_ipv6 && var.create_ipv6_address) ? 1 : 0
-  provider   = google-beta
-  project    = var.project
-  name       = "${var.name}-ipv6-address"
-  ip_version = "IPV6"
-  labels     = var.labels
-}
 
 ### IPv6 block ###
 
 # HTTP proxy when http forwarding is true
-resource "google_compute_target_http_proxy" "default" {
-  url_map = var.https_redirect == false ? local.url_map : join("", google_compute_url_map.https_redirect.*.self_link)
+resource "google_compute_region_target_http_proxy" "default" {
+  region  = var.region
+  url_map = var.https_redirect == false ? local.url_map : join("", google_compute_region_url_map.https_redirect.*.self_link)
   project = var.project
   count   = local.create_http_forward ? 1 : 0
   name    = "${var.name}-http-proxy"
 }
 
 # HTTPS proxy when ssl is true
-resource "google_compute_target_https_proxy" "default" {
-  count           = var.ssl || var.certificate_map != null ? 1 : 0
-  certificate_map = var.certificate_map != null ? "//certificatemanager.googleapis.com/${var.certificate_map}" : null
-  quic_override   = var.quic == null ? "NONE" : var.quic ? "ENABLE" : "DISABLE"
-  project         = var.project
-  name            = "${var.name}-https-proxy"
-  url_map         = local.url_map
+resource "google_compute_region_target_https_proxy" "default" {
+  count    = var.ssl != false ? 1 : 0
+  provider = google-beta
+  region   = var.region
+  project  = var.project
+  name     = "${var.name}-https-proxy"
+  url_map  = local.url_map
 
   ssl_certificates = compact(concat(var.ssl_certificates, google_compute_ssl_certificate.default.*.self_link, google_compute_managed_ssl_certificate.default.*.self_link, ), )
   ssl_policy       = var.ssl_policy
@@ -164,14 +154,16 @@ resource "google_compute_managed_ssl_certificate" "default" {
     domains = var.managed_ssl_certificate_domains
   }
 }
-resource "google_compute_url_map" "default" {
+resource "google_compute_region_url_map" "default" {
+  region          = var.region
   project         = var.project
   count           = var.create_url_map ? 1 : 0
   name            = "${var.name}-url-map"
-  default_service = google_compute_backend_service.default[keys(var.backends)[0]].self_link
+  default_service = google_compute_region_backend_service.default[keys(var.backends)[0]].self_link
 }
 
-resource "google_compute_url_map" "https_redirect" {
+resource "google_compute_region_url_map" "https_redirect" {
+  region  = var.region
   project = var.project
   count   = var.https_redirect ? 1 : 0
   name    = "${var.name}-https-redirect"
@@ -182,7 +174,8 @@ resource "google_compute_url_map" "https_redirect" {
   }
 }
 
-resource "google_compute_backend_service" "default" {
+resource "google_compute_region_backend_service" "default" {
+  region   = var.region
   provider = google-beta
   for_each = var.backends
 
@@ -198,16 +191,11 @@ resource "google_compute_backend_service" "default" {
   description                     = lookup(each.value, "description", null)
   connection_draining_timeout_sec = lookup(each.value, "connection_draining_timeout_sec", null)
   enable_cdn                      = lookup(each.value, "enable_cdn", false)
-  compression_mode                = lookup(each.value, "compression_mode", "DISABLED")
-  custom_request_headers          = lookup(each.value, "custom_request_headers", [])
-  custom_response_headers         = lookup(each.value, "custom_response_headers", [])
   session_affinity                = lookup(each.value, "session_affinity", null)
   affinity_cookie_ttl_sec         = lookup(each.value, "affinity_cookie_ttl_sec", null)
 
   health_checks = lookup(each.value, "health_check", null) == null ? null : [google_compute_health_check.default[each.key].self_link]
 
-  # To achieve a null backend edge_security_policy, set each.value.edge_security_policy to "" (empty string), otherwise, it fallsback to var.edge_security_policy.
-  edge_security_policy = lookup(each.value, "edge_security_policy") == "" ? null : (lookup(each.value, "edge_security_policy") == null ? var.edge_security_policy : each.value.edge_security_policy)
 
   # To achieve a null backend security_policy, set each.value.security_policy to "" (empty string), otherwise, it fallsback to var.security_policy.
   security_policy = lookup(each.value, "security_policy") == "" ? null : (lookup(each.value, "security_policy") == null ? var.security_policy : each.value.security_policy)
@@ -274,7 +262,6 @@ resource "google_compute_backend_service" "default" {
           query_string_blacklist = each.value.cdn_policy.cache_key_policy.query_string_blacklist
           query_string_whitelist = each.value.cdn_policy.cache_key_policy.query_string_whitelist
           include_named_cookies  = each.value.cdn_policy.cache_key_policy.include_named_cookies
-          include_http_headers   = each.value.cdn_policy.cache_key_policy.include_http_headers
         }
       }
     }
@@ -284,9 +271,6 @@ resource "google_compute_backend_service" "default" {
   #   google_compute_health_check.default
   # ]
 
-  lifecycle {
-    ignore_changes = [backend]
-  }
 }
 
 resource "google_compute_health_check" "default" {
