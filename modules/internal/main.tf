@@ -62,7 +62,7 @@ resource "google_compute_forwarding_rule" "https" {
 
 resource "google_compute_address" "default" {
   count        = 1
-  purpose      = "SHARED_LOADBALANCER_VIP"
+  purpose      = var.address_purpose
   subnetwork   = var.subnetwork
   address_type = "INTERNAL"
   provider     = google-beta

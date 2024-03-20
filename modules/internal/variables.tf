@@ -47,6 +47,12 @@ variable "address" {
   default     = null
 }
 
+variable "address_purpose" {
+  type        = string
+  description = "https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_address.html#purpose"
+  default     = "GCE_ENDPOINT"
+}
+
 variable "enable_ipv6" {
   type        = bool
   description = "Enable IPv6 address on the CDN load-balancer"
