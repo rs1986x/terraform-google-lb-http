@@ -194,7 +194,7 @@ resource "google_compute_region_backend_service" "default" {
   session_affinity                = lookup(each.value, "session_affinity", null)
   affinity_cookie_ttl_sec         = lookup(each.value, "affinity_cookie_ttl_sec", null)
 
-  health_checks = lookup(each.value, "health_check", null) == null ? null : [google_compute_health_check.default[each.key].self_link]
+  health_checks = lookup(each.value, "health_check", null) == null ? null : [google_compute_region_health_check.default[each.key].self_link]
 
 
   # To achieve a null backend security_policy, set each.value.security_policy to "" (empty string), otherwise, it fallsback to var.security_policy.
@@ -273,7 +273,7 @@ resource "google_compute_region_backend_service" "default" {
 
 }
 
-resource "google_compute_health_check" "default" {
+resource "google_compute_region_health_check" "default" {
   provider = google-beta
   for_each = local.health_checked_backends
   project  = var.project
